@@ -26,7 +26,7 @@ def get_book_data_from_isbn(isbn):
         return title, []
 
     work_data = work_response.json()
-    subjects = work_data.get("subjects", [])[:6]  # Limit to 6 to reduce API load
+    subjects = work_data.get("subjects", [])[:6]  # limit API load (temporary, will increase eventually)
     return title, subjects
 
 # ---------- Search Open Library for Books by Subject ----------
@@ -63,7 +63,7 @@ def build_similarity_graph(isbn):
 
     for tag in main_tags:
         related_books = find_books_by_subject(tag)
-        time.sleep(0.5)  # Be kind to the API
+        time.sleep(0.5)  
 
         for book in related_books:
             if book not in seen_books:
