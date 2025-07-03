@@ -48,8 +48,11 @@ def get_book_data_from_isbn(isbn, country_keywords):
             if tag not in filtered_subjects:
                 filtered_subjects.append(tag)
 
-    return title, filtered_subjects[:6]  # Limit to 6
+    # Classify input book as fiction or non-fiction
+    subject_str = " ".join(raw_subjects).lower()
+    is_fiction = "fiction" in subject_str
 
+    return title.strip(), filtered_subjects[:6], title.strip().lower(), is_fiction
 
 # ---------- Search Open Library for Books by Subject ----------
 def find_books_by_subject(subject, original_title_lower, max_books=3):
