@@ -104,3 +104,11 @@ def draw_graph(G, center_title):
     plt.title(f"Thematic Similarity Network: {center_title}")
     plt.axis("off")
     plt.show()
+# ---------- Main ----------
+if __name__ == "__main__":
+    isbn = input("Enter an ISBN (e.g., 9780143124870): ").strip()
+    graph, center = build_similarity_graph(isbn)
+    if graph:
+        draw_graph(graph, center)
+    else:
+        print("Could not build graph. Please check the ISBN and try again.")
