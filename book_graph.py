@@ -4,8 +4,18 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 import time
 
+# ---------- Determine if Tag is Useful ----------
+def is_useful_tag(tag, country_keywords):
+    general_tags = {"Fiction", "Literary fiction", "Accessible book", "Protected DAISY", "In library"}
+    tag_lower = tag.lower()
+    if tag in general_tags:
+        return False
+    if any(country.lower() in tag_lower for country in country_keywords):
+        return True
+    return True if tag not in general_tags else False
+
 # ---------- Get Main Book Info from ISBN ----------
-def get_book_data_from_isbn(isbn):
+def get_book_data_from_isbn(isbn, country_keywords):
     url = f"https://openlibrary.org/isbn/{isbn}.json"
     response = requests.get(url)
     if response.status_code != 200:
@@ -26,8 +36,16 @@ def get_book_data_from_isbn(isbn):
         return title, []
 
     work_data = work_response.json()
-    subjects = work_data.get("subjects", [])[:6]  # limit API load (temporary, will increase eventually)
-    return title, subjects
+    raw_subjects = work_data.get("subjects", [])
+    filtered_subjects = [tag for tag in raw_subjects if is_useful_tag(tag, country_keywords)]
+
+    # Ensure at least one country tag is included
+    country_tags = [tag for tag in raw_subjects if any(c.lower() in tag.lower() for c in country_keywords)]
+    for tag in country_tags:
+        if tag not in filtered_subjects:
+            filtered_subjects.append(tag)
+
+    return title, filtered_subjects[:6]  # Limit to 6 to reduce API load
 
 # ---------- Search Open Library for Books by Subject ----------
 def find_books_by_subject(subject, max_books=3):
@@ -47,7 +65,8 @@ def find_books_by_subject(subject, max_books=3):
 
 # ---------- Build Graph from ISBN ----------
 def build_similarity_graph(isbn):
-    main_title, main_tags = get_book_data_from_isbn(isbn)
+    country_keywords = ["Japan", "Canada", "United States", "England", "France", "Germany", "China", "India"]
+    main_title, main_tags = get_book_data_from_isbn(isbn, country_keywords)
     if not main_title:
         return None, ""
 
@@ -63,7 +82,7 @@ def build_similarity_graph(isbn):
 
     for tag in main_tags:
         related_books = find_books_by_subject(tag)
-        time.sleep(0.5)  
+        time.sleep(0.5)  # Be kind to the API
 
         for book in related_books:
             if book not in seen_books:
@@ -85,10 +104,3 @@ def draw_graph(G, center_title):
     plt.title(f"Thematic Similarity Network: {center_title}")
     plt.axis("off")
     plt.show()
-
-# ---------- Main ----------
-if __name__ == "__main__":
-    isbn = input("Enter an ISBN (e.g., 9780525520047): ").strip()
-    graph, center = build_similarity_graph(isbn)
-    if graph:
-        draw_graph(graph, center)
