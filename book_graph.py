@@ -4,17 +4,6 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 import time
 
-# ---------- Determine if Tag is Useful ----------
-def is_useful_tag(tag, country_keywords):
-    general_tags = {"Fiction", "Literary fiction", "Accessible book", "Protected DAISY", "In library"}
-    tag_lower = tag.lower()
-    if tag in general_tags:
-        return False
-    if any(country.lower() in tag_lower for country in country_keywords):
-        return True
-    return True if tag not in general_tags else False
-
-# ---------- Get Main Book Info from ISBN ----------
 def get_book_data_from_isbn(isbn, country_keywords):
     url = f"https://openlibrary.org/isbn/{isbn}.json"
     response = requests.get(url)
@@ -37,35 +26,63 @@ def get_book_data_from_isbn(isbn, country_keywords):
 
     work_data = work_response.json()
     raw_subjects = work_data.get("subjects", [])
-    filtered_subjects = [tag for tag in raw_subjects if is_useful_tag(tag, country_keywords)]
 
-    # Ensure at least one country tag is included
-    country_tags = [tag for tag in raw_subjects if any(c.lower() in tag.lower() for c in country_keywords)]
-    for tag in country_tags:
-        if tag not in filtered_subjects:
+    general_tags = {
+        "fiction", "literary fiction", "accessible book",
+        "protected daisy", "in library", "large type books"
+    }
+
+    filtered_subjects = []
+    country_tags = []
+
+    for tag in raw_subjects:
+        tag_lower = tag.lower()
+        if any(country.lower() in tag_lower for country in country_keywords):
+            country_tags.append(tag)
+        elif tag_lower not in general_tags:
             filtered_subjects.append(tag)
 
-    return title, filtered_subjects[:6]  # Limit to 6 to reduce API load
+    # Ensure at least one country tag is included
+    if country_tags:
+        for tag in country_tags:
+            if tag not in filtered_subjects:
+                filtered_subjects.append(tag)
+
+    return title, filtered_subjects[:6]  # Limit to 6
+
 
 # ---------- Search Open Library for Books by Subject ----------
-def find_books_by_subject(subject, max_books=3):
+def find_books_by_subject(subject, original_title_lower, max_books=3):
     results = []
-    query = f"https://openlibrary.org/search.json?subject={subject.replace(' ', '%20')}&limit={max_books}"
+    query = f"https://openlibrary.org/search.json?subject={subject.replace(' ', '%20')}&limit={max_books+2}"
     response = requests.get(query)
     if response.status_code != 200:
         return results
 
     data = response.json()
     for doc in data.get("docs", []):
-        title = doc.get("title")
+        title = doc.get("title", "").strip()
         author = doc.get("author_name", ["Unknown"])[0]
+        book_label = f"{title} by {author}"
+
+        # Avoid suggesting the input book again
+        if title.lower().strip() == original_title_lower:
+            continue
+
         if title:
-            results.append(f"{title} by {author}")
+            results.append(book_label)
+
+        if len(results) >= max_books:
+            break
+
     return results
 
 # ---------- Build Graph from ISBN ----------
 def build_similarity_graph(isbn):
-    country_keywords = ["Japan", "Canada", "United States", "England", "France", "Germany", "China", "India"]
+    country_keywords = [
+    "Japan", "Canada", "United States", "England", "France",
+    "Germany", "China", "India", "Mexico", "Italy", "Russia", "Korea"
+]
     main_title, main_tags = get_book_data_from_isbn(isbn, country_keywords)
     if not main_title:
         return None, ""
@@ -104,7 +121,7 @@ def draw_graph(G, center_title):
     plt.title(f"Thematic Similarity Network: {center_title}")
     plt.axis("off")
     plt.show()
-# ---------- Main ----------
+    # ---------- Main ----------
 if __name__ == "__main__":
     isbn = input("Enter an ISBN (e.g., 9780143124870): ").strip()
     graph, center = build_similarity_graph(isbn)
