@@ -55,7 +55,7 @@ def get_book_data_from_isbn(isbn, country_keywords):
     return title.strip(), filtered_subjects[:6], title.strip().lower(), is_fiction
 
 # ---------- Search Open Library for Books by Subject ----------
-def find_books_by_subject(subject, original_title_lower, max_books=3):
+def find_books_by_subject(subject, original_title_lower, is_fiction_input, max_books=3):
     results = []
     query = f"https://openlibrary.org/search.json?subject={subject.replace(' ', '%20')}&limit={max_books+2}"
     response = requests.get(query)
@@ -66,14 +66,20 @@ def find_books_by_subject(subject, original_title_lower, max_books=3):
     for doc in data.get("docs", []):
         title = doc.get("title", "").strip()
         author = doc.get("author_name", ["Unknown"])[0]
-        book_label = f"{title} by {author}"
+        publish_year = doc.get("first_publish_year", 0)
+        subject_list = " ".join(doc.get("subject", [])).lower()
 
-        # Avoid suggesting the input book again
-        if title.lower().strip() == original_title_lower:
+        if not title or title.lower().strip() == original_title_lower:
+            continue
+        if publish_year < 2000:
+            continue
+        if is_fiction_input and "fiction" not in subject_list:
+            continue
+        if not is_fiction_input and "fiction" in subject_list:
             continue
 
-        if title:
-            results.append(book_label)
+        book_label = f"{title} by {author}"
+        results.append(book_label)
 
         if len(results) >= max_books:
             break
