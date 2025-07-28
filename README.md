@@ -1,4 +1,4 @@
-# book-graph
+# PlotLines
 Generates a similarity network for a book based on tags queried from Open Library's Search API
 
 As someone who is quite picky about what they read, searching for my next book can often be a time consuming task. 
