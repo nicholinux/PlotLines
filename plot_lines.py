@@ -141,7 +141,7 @@ def get_book_data_from_isbn(isbn, country_keywords):
             if len(final_tags) >= 5:
                 break
 
-    # As a last resort, allow any leftover raw subjects (even if blocklisted) to avoid an empty graph
+    # Allow any leftover raw subjects (even if blocklisted) to avoid an empty graph
     if len(final_tags) < 5:
         for t in raw_subjects:
             tl = t.lower().strip()
@@ -195,7 +195,6 @@ def find_books_by_subject(subject, original_title_lower, is_fiction_input, max_b
             edition_count = doc.get("edition_count", 0)
             subject_list = " ".join(doc.get("subject", [])).lower() if "subject" in doc else ""
 
-            # Loosen this a bit: many good works have 1 recorded edition in OL
             if edition_count < 1:
                 continue
 
@@ -242,7 +241,7 @@ def build_similarity_graph(isbn):
 
     for tag in main_tags:
         related_books = find_books_by_subject(tag, original_title_lower, is_fiction)
-        time.sleep(0.5)  # Be kind to the API
+        time.sleep(0.5)  # Limit usage
 
         for book in related_books:
             if book not in seen_books:
@@ -272,3 +271,4 @@ if __name__ == "__main__":
         draw_graph(graph, center)
     else:
         print("Could not build graph. Please check the ISBN and try again.")
+
